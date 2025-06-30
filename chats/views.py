@@ -4,7 +4,6 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.viewsets import ViewSet
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.db.models import QuerySet
 from drf_yasg.utils import swagger_auto_schema
@@ -15,7 +14,6 @@ from chats.serializers import (
     ChatSerializer, ChatViewSerializer,
     MessageViewSerializer, MessageSerializer,
 )
-from chats.utils import encrypt_message, decrypt_message
 
 
 class ChatsViewSet(ViewSet):
@@ -179,7 +177,5 @@ class MessagesViewSet(ViewSet):
         message = get_object_or_404(
             Message, pk=pk, sender=request.user
         )
-        if message.chat.pk != request.data.get("chat"):
-            raise PermissionDenied(detail="wtf is going on!?")
         message.delete()
         return Response(data="message has been deleted!")

@@ -8,8 +8,14 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from users.views import (
+    PhoneAuthRequestView, PhoneAuthConfirmView,
+    UserProfileView, InviteCodeActivateView
+)
 
 from users.views import RegistrationViewSet, UserViewSet
+from chats.views import ChatsViewSet, MessagesViewSet
+from publics.views import PublicViewSet
 
 
 router = DefaultRouter()
@@ -20,6 +26,18 @@ router.register(
 router.register(
     prefix="users", viewset=UserViewSet,
     basename="users"
+)
+router.register(
+    prefix="chats", viewset=ChatsViewSet,
+    basename="chats"
+)
+router.register(
+    prefix="messages", viewset=MessagesViewSet,
+    basename="messages"
+)
+router.register(
+    prefix="publics", viewset=PublicViewSet,
+    basename="publics"
 )
 
 schema_view = get_schema_view(
@@ -36,9 +54,20 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("api/v1/", include(router.urls)),
-    path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+    path(route="admin/", view=admin.site.urls),
+    path(route="api/token/",
+         view=TokenObtainPairView.as_view(), name="token_obtain_pair"
+    ),
+    path(route="api/token/refresh/",
+         view=TokenRefreshView.as_view(), name="token_refresh"
+    ),
+    path(route="api/v1/", view=include(router.urls)),
+    path(route="swagger/",
+         view=schema_view.with_ui("swagger", cache_timeout=0),
+         name="schema-swagger-ui"
+    ),
+    path('auth/phone/', PhoneAuthRequestView.as_view()),
+    path('auth/phone/confirm/', PhoneAuthConfirmView.as_view()),
+    path('profile/', UserProfileView.as_view()),
+    path('profile/invite-activate/', InviteCodeActivateView.as_view()),
 ]

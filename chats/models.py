@@ -69,4 +69,3 @@ class Message(models.Model):
     def __str__(self):
         return (f"{self.text[:20]} | {self.sender} "
             f"| {self.sent_at} | {self.chat}")
-      

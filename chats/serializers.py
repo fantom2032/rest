@@ -22,10 +22,16 @@ class ChatSerializer(serializers.Serializer):
         return chat
 
     def update(self, instance: Chat, validated_data: dict):
-        users = validated_data.pop("users")
-        if users:
-            instance.users.set(users)
-        return super().update(instance, validated_data)
+        # users = validated_data.pop("users")
+        for key, value in validated_data.items():
+            if key == "users":
+                instance.users.set(value)
+                continue
+            setattr(instance, key, value)
+        # if users:
+        #     instance.users.set(users)
+        instance.save()
+        return instance
 
 
 class MessageViewSerializer(serializers.Serializer):
@@ -45,7 +51,7 @@ class ChatViewSerializer(serializers.Serializer):
     is_group = serializers.BooleanField()
     title = serializers.CharField(max_length=100)
     users = UserSerializer(many=True)
-    messages = MessageViewSerializer(many=True)
+    chat_messages = MessageViewSerializer(many=True)
 
 
 class MessageSerializer(serializers.Serializer):

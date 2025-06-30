@@ -1,5 +1,6 @@
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -10,10 +11,69 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import random
+import time
+from rest_framework.views import APIView
+from users.models import UserProfile
+from users.serializers import (
+    PhoneAuthRequestSerializer, PhoneAuthConfirmSerializer,
+    UserProfileSerializer, InviteCodeActivateSerializer
+)
 from users.serializers import UserModelSerializer, UserSerializer
-from users.models import Codes
+from users.models import Codes, UserProfile
 
+PHONE_CODE_STORAGE = {}
+
+class PhoneAuthRequestView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        serializer = PhoneAuthRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data['phone']
+        code = f"{random.randint(1000, 9999)}"
+        PHONE_CODE_STORAGE[phone] = code
+        time.sleep(random.uniform(1, 2)) 
+        return Response({"message": "Код отправлен"})
+
+class PhoneAuthConfirmView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        serializer = PhoneAuthConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data['phone']
+        code = serializer.validated_data['code']
+        if PHONE_CODE_STORAGE.get(phone) != code:
+            return Response({"error": "Неверный код"}, status=400)
+        user, created = User.objects.get_or_create(username=phone, defaults={"is_active": True})
+        profile, _ = UserProfile.objects.get_or_create(user=user, phone=phone)
+        return Response({"message": "Авторизация успешна", "invite_code": profile.invite_code})
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        profile = request.user.profile
+        serializer = UserProfileSerializer(profile)
+        return Response(serializer.data)
+
+class InviteCodeActivateView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        serializer = InviteCodeActivateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        code = serializer.validated_data['invite_code']
+        profile = request.user.profile
+        if profile.activated_invite_code:
+            return Response({"error": "Инвайт-код уже активирован", "activated_invite_code": profile.activated_invite_code}, status=400)
+        try:
+            inviter = UserProfile.objects.get(invite_code=code)
+        except UserProfile.DoesNotExist:
+            return Response({"error": "Инвайт-код не найден"}, status=404)
+        profile.activated_invite_code = code
+        profile.invited_by = inviter
+        profile.save()
+        return Response({"message": "Инвайт-код активирован", "activated_invite_code": code})
 
 class RegistrationViewSet(ViewSet):
     permission_classes = [AllowAny]
@@ -34,7 +94,6 @@ class RegistrationViewSet(ViewSet):
             user = User.objects.create_user(**s.validated_data)
             code = Codes(user=user)
             code.save()
-            # отправка письма с кодом активации
             return Response(
                 data={"message": "User successfully registered"},
                 status=status.HTTP_201_CREATED # Лучше 201
@@ -44,6 +103,12 @@ class RegistrationViewSet(ViewSet):
                 data={"error": str(e)},
                 status=status.HTTP_409_CONFLICT
             )
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10 
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 class UserViewSet(ViewSet):
@@ -80,12 +145,17 @@ class UserViewSet(ViewSet):
         responses={200: UserSerializer(many=True)}
     )
     def list(self, request: Request) -> Response:
-        queryset = User.objects.all()
-        serializer = UserSerializer(queryset, many=True)
-        return Response(
-            data=serializer.data, status=status.HTTP_200_OK
-        )
-
+        queryset = User.objects.all() # Достаем пользователей
+        paginator = CustomPageNumberPagination() # объявляем пагинатор
+        items = paginator.paginate_queryset(
+            queryset=queryset, request=request
+        ) # делим юзеров на кучки
+        serializer = UserSerializer(
+            instance=items, many=True
+        ) # в сериализатор передаем кучки пользователей
+        return paginator.get_paginated_response(
+            data=serializer.data
+        ) # вывод с пагинацией
 
     @swagger_auto_schema(
         responses={
@@ -147,3 +217,5 @@ class UserViewSet(ViewSet):
         return Response(
             data={"message": "user has been deleted"}
         )
+
+
