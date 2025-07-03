@@ -1,9 +1,9 @@
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.viewsets import ViewSet
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from django.db.models import QuerySet
 from drf_yasg.utils import swagger_auto_schema
@@ -17,8 +17,8 @@ from chats.serializers import (
 
 
 class ChatsViewSet(ViewSet):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    permission_classes = [AllowAny]
+    # authentication_classes = [JWTAuthentication]
 
     @swagger_auto_schema(responses={
         200: ChatViewSerializer(many=True)
@@ -52,10 +52,7 @@ class ChatsViewSet(ViewSet):
         try:
             chat: Chat = request.user.users_chats.get(pk=pk)
         except Chat.DoesNotExist:
-            return Response(
-                data="chat not exist",
-                status=status.HTTP_404_NOT_FOUND
-            )
+            raise NotFound(detail="chat not exist")
         serializer = ChatViewSerializer(instance=chat)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 

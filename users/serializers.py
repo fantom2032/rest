@@ -1,26 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from users.models import UserProfile
 
-class PhoneAuthRequestSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=20)
-
-class PhoneAuthConfirmSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=20)
-    code = serializers.CharField(max_length=4)
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    invited_users = serializers.SerializerMethodField()
-    class Meta:
-        model = UserProfile
-        fields = ['phone', 'invite_code', 'activated_invite_code', 'invited_by', 'invited_users']
-
-    def get_invited_users(self, obj):
-        return [u.phone for u in obj.invited_users.all()]
-
-class InviteCodeActivateSerializer(serializers.Serializer):
-    invite_code = serializers.CharField(max_length=6)
 
 class UserModelSerializer(serializers.ModelSerializer):
     class Meta:

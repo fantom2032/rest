@@ -1,8 +1,21 @@
-from rest_framework import serializers
-from images.models import Images
+from rest_framework.serializers import ModelSerializer
 
-class ImagesSerializer(serializers.ModelSerializer):
+from images.models import Gallery, Images, Avatar
+
+
+class GallerySerializer(ModelSerializer):
+    class Meta:
+        model = Gallery
+        fields = "__all__"
+
+
+class ImagesSerializer(ModelSerializer):
     class Meta:
         model = Images
-        fields = ['id', 'image', 'user']
-        read_only_fields = ['id', 'user']
+        fields = "__all__"
+
+
+class AvatarSerializer(ModelSerializer):
+    class Meta:
+        model = Avatar
+        fields = "__all__"

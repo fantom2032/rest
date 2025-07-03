@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from debug_toolbar.toolbar import debug_toolbar_urls
 from rest_framework.routers import DefaultRouter
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -8,15 +10,12 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from users.views import (
-    PhoneAuthRequestView, PhoneAuthConfirmView,
-    UserProfileView, InviteCodeActivateView
-)
 
 from users.views import RegistrationViewSet, UserViewSet
 from chats.views import ChatsViewSet, MessagesViewSet
 from publics.views import PublicViewSet
-
+from images.views import GalleryView, ImagesView
+from publics.views import PublicInviteView
 
 router = DefaultRouter()
 router.register(
@@ -38,6 +37,14 @@ router.register(
 router.register(
     prefix="publics", viewset=PublicViewSet,
     basename="publics"
+)
+router.register(
+    prefix="gallery", viewset=GalleryView,
+    basename="gallery"
+)
+router.register(
+    prefix="images", viewset=ImagesView,
+    basename="images"
 )
 
 schema_view = get_schema_view(
@@ -66,8 +73,5 @@ urlpatterns = [
          view=schema_view.with_ui("swagger", cache_timeout=0),
          name="schema-swagger-ui"
     ),
-    path('auth/phone/', PhoneAuthRequestView.as_view()),
-    path('auth/phone/confirm/', PhoneAuthConfirmView.as_view()),
-    path('profile/', UserProfileView.as_view()),
-    path('profile/invite-activate/', InviteCodeActivateView.as_view()),
-]
+    path('invite/', PublicInviteView.as_view(), name='public-invite'),
+] + debug_toolbar_urls()
