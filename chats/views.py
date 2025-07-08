@@ -24,7 +24,9 @@ class ChatsViewSet(ViewSet):
         200: ChatViewSerializer(many=True)
     })
     def list(self, request: Request) -> Response:
-        chats: QuerySet[Chat] = request.user.users_chats.all()
+        chats: QuerySet[Chat] = request.user.users_chats.select_related(
+            "owner"
+        ).prefetch_related("users", "messages")
         serializer = ChatViewSerializer(instance=chats, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
@@ -50,11 +52,14 @@ class ChatsViewSet(ViewSet):
     )
     def retrieve(self, request: Request, pk: int) -> Response:
         try:
-            chat: Chat = request.user.users_chats.get(pk=pk)
+            chat: Chat = request.user.users_chats.select_related(
+                "owner"
+            ).prefetch_related("users", "messages").get(pk=pk)
         except Chat.DoesNotExist:
             raise NotFound(detail="chat not exist")
         serializer = ChatViewSerializer(instance=chat)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
 
     @swagger_auto_schema(
         request_body=ChatSerializer,
@@ -131,7 +136,8 @@ class MessagesViewSet(ViewSet):
     )
     def retrieve(self, request: Request, pk: int) -> Response:
         message = get_object_or_404(
-            Message, pk=pk, sender=request.user
+            Message.objects.select_related("chat", "sender"),
+            pk=pk, sender=request.user
         )
         serializer = MessageViewSerializer(instance=message)
         return Response(data=serializer.data)

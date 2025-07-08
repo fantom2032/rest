@@ -4,7 +4,6 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.viewsets import ViewSet
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.views import APIView
 from django.db.models import QuerySet
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -17,30 +16,6 @@ from publics.serializers import (
     PublicSerializer, PublicViewSerializer,
 )
 
-class PublicInviteView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        public_id = request.data.get("public_id")
-        invited_user_id = request.data.get("invited_user_id")
-        try:
-            public = Public.objects.get(id=public_id)
-            invited_user = User.objects.get(id=invited_user_id)
-        except (Public.DoesNotExist, User.DoesNotExist):
-            return Response({"error": "Public or User not found"}, status=status.HTTP_404_NOT_FOUND)
-        invite, created = PublicInvite.objects.get_or_create(
-            public=public,
-            invited_user=invited_user,
-            invited_by=request.user
-        )
-        return Response({
-            "id": invite.id,
-            "public": public.title,
-            "invited_user": invited_user.username,
-            "invited_by": request.user.username,
-            "created_at": invite.created_at,
-            "accepted": invite.accepted
-        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 class PublicViewSet(ViewSet):
     permission_classes = [AllowAny]
@@ -49,7 +24,9 @@ class PublicViewSet(ViewSet):
     def list(self, request: Request) -> Response:
         publics: QuerySet[Public] = Public.objects.select_related(
             "owner"
-        ).prefetch_related("members").filter(is_private=False)
+        ).prefetch_related("members").only(
+            "id", "name", "owner__id", "owner__username", "is_private"
+        ).filter(is_private=False)
         serializer = PublicViewSerializer(
             instance=publics, many=True
         )
@@ -57,10 +34,9 @@ class PublicViewSet(ViewSet):
 
     @method_decorator(cache_page(timeout=600))
     def retrieve(self, request: Request, pk: int) -> Response:
-        # public: Public = get_object_or_404(
-        #     Public, pk=pk, members=request.user
-        # )
-        public = Public.objects.select_related("owner").get(pk=pk)
+        public = Public.objects.select_related("owner").only(
+            "id", "name", "owner__id", "owner__username", "is_private"
+        ).get(pk=pk)
         serializer = PublicViewSerializer(instance=public)
         return Response(data=serializer.data)
 
