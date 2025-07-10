@@ -9,9 +9,9 @@ from django.contrib.auth.signals import (
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from loguru import logger
-
+from django.conf import settings
 from common.mail import send_email
-from users.models import Codes
+from users.models import Codes, UserLoginData
 
 
 @receiver(signal=post_save, sender=User)
@@ -46,3 +46,19 @@ def log_something(instance: User, **kwargs):
     #     send_email()
     #     return
     
+@receiver(user_logged_in)
+def check_ip_on_login(sender, user, request, **kwargs):
+    ip = request.META.get('REMOTE_ADDR')
+    login_data, created = UserLoginData.objects.get_or_create(user=user)
+    if ip not in login_data.confirmed_ips:
+        send_email(
+            'Подтверждение нового IP-адреса',
+            f'Обнаружен вход с нового IP: {ip}. Подтвердите, что это вы.',
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=True,
+        )
+    login_data.last_ip = ip
+    if ip not in login_data.confirmed_ips:
+        login_data.confirmed_ips.append(ip)
+    login_data.save()

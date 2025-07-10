@@ -27,3 +27,10 @@ class Codes(models.Model):
 
     def __str__(self):
         return f"{self.user.username} | {self.created_at}"
+class UserLoginData(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    last_ip = models.GenericIPAddressField(null=True, blank=True)
+    confirmed_ips = models.JSONField(default=list, blank=True)  # список подтвержденных IP
+
+    def __str__(self):
+        return f"{self.user.username} login data"
