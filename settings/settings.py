@@ -15,6 +15,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+AUTH_USER_MODEL = "users.Client"
+
 INSTALLED_APPS = [
     "daphne",
     "rest_framework_simplejwt",
@@ -108,9 +110,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ru-RU"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Almaty"
 
 USE_I18N = True
 
