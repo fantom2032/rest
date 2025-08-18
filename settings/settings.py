@@ -18,6 +18,7 @@ ALLOWED_HOSTS = ["*"]
 AUTH_USER_MODEL = "users.Client"
 
 INSTALLED_APPS = [
+    "corsheaders",
     "daphne",
     "rest_framework_simplejwt",
     "drf_yasg",
@@ -27,6 +28,8 @@ INSTALLED_APPS = [
     "images.apps.ImagesConfig",
     "users.apps.UsersConfig",
     "chats.apps.ChatsConfig",
+    "posts.apps.PostsConfig",
+    "comments.apps.CommentsConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -40,6 +43,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "corsheaders.middleware.CorsMiddleware", 
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -65,6 +69,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "settings.wsgi.application"
 ASGI_APPLICATION = "settings.asgi.application"
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ORIGINS = []
 
 DATABASES = {
     "default": {
@@ -123,9 +130,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-MEDIA_URL = "/media/"
+MEDIA_URL = "media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Default primary key field type

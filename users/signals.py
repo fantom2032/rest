@@ -1,28 +1,39 @@
-import uuid
-
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import User
-from loguru import logger
 
-from users.models import Codes
-from users.tasks import send_activation_email  # Импортируем celery-задачу
+from users.models import Client, FriendInvite
+from users.tasks import ActivateAccountTask
 
-@receiver(post_save, sender=User)
-def post_registration(sender, instance, created, **kwargs):
-    if created:
-        temp = str(uuid.uuid4())
-        code = Codes(user=instance, code=temp)
-        code.save()
-        try:
-            # Запускаем celery-задачу вместо прямой отправки письма
-            send_activation_email.delay(
-                email=instance.email,
-                username=instance.username,
-                code=temp
-            )
-            logger.info(f"Задача на отправку письма активации создана для {instance.email}")
-        except Exception as e:
-            logger.error(f"Ошибка при создании задачи отправки письма: {e}")
+
+@receiver(signal=post_save, sender=Client)
+def post_registration(
+    sender: Client, instance: Client, created: bool, **kwargs
+):
+    if instance.is_superuser:
         return
-    logger.info("это после обновления")
+    
+    if created:
+        ActivateAccountTask().apply_async(
+            kwargs={
+                "pk": instance.pk,
+                "username": instance.username,
+                "email": instance.email,
+                "code": str(instance.activation_code),
+            }
+        )
+
+
+@receiver(signal=post_save, sender=FriendInvite)
+def remove_invites(
+    instance: FriendInvite, created: bool, **kwargs
+):
+    if not created:
+        if instance.is_accepted:
+            from_client = instance.from_client
+            to_client = instance.to_client
+            from_client.friends.add(to_client)
+            to_client.friends.add(from_client)
+            from_client.save()
+            to_client.save()
+            
+        instance.delete()
