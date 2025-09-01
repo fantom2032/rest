@@ -48,3 +48,26 @@ function redirect (url) {
         usersBlock.innerHTML = `<p style="color:red;">Не удалось загрузить пользователей</p>`;
     }
 })();
+document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById('add-friend-btn');
+  if (btn) {
+    btn.onclick = function() {
+      fetch('/api/friends/invites/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ to_user: btn.dataset.userId })
+      })
+      .then(resp => {
+        if (resp.ok) {
+          alert('Заявка отправлена!');
+          btn.disabled = true;
+        } else {
+          alert('Ошибка отправки заявки');
+        }
+      });
+    }
+  }
+});

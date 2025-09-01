@@ -12,5 +12,8 @@
     </div>
     <div class="pagination">
     </div>
+    {% if user.id != request.user.id %}
+    <button id="add-friend-btn" data-user-id="{{ user.id }}">Добавить в друзья</button>
+    {% endif %}
 </body>
 </html>
